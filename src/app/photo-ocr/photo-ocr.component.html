@@ -1,0 +1,36 @@
+<div class="ocr-card">
+  <h3>Stolperstein photo → text</h3>
+
+  <div class="controls">
+    <button type="button" (click)="openFilePicker()">Upload image</button>
+    <button type="button" (click)="openCameraPicker()">Take photo (camera)</button>
+    <input #fileInput type="file" accept="image/*" (change)="onFileChange($event)" hidden />
+    <input #cameraInput type="file" accept="image/*" capture="environment" (change)="onFileChange($event)" hidden />
+  </div>
+
+  <div class="lang-select">
+    <label for="lang">OCR language:</label>
+    <select id="lang" [(ngModel)]="langs">
+      <option value="eng">English (eng)</option>
+      <option value="deu">German (deu)</option>
+      <option value="eng+deu">English + German</option>
+    </select>
+  </div>
+
+  <div class="preview" *ngIf="imageUrl">
+    <img [src]="imageUrl" alt="preview" />
+  </div>
+
+  <div class="status">
+    <div *ngIf="processing">Processing image ...</div>
+    <div *ngIf="!processing && ocrText">
+      <h4>OCR text</h4>
+      <pre>{{ ocrText }}</pre>
+      <h4>Parsed</h4>
+      <div *ngIf="parsed">
+        <div><strong>Name:</strong> {{ parsed.name || '—' }}</div>
+        <div><strong>Year:</strong> {{ parsed.year || '—' }}</div>
+      </div>
+    </div>
+  </div>
+</div>

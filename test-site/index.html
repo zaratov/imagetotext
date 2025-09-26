@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Photo OCR Test</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="container">
+      <h1>Stolperstein Photo → OCR (Test)</h1>
+
+      <div class="controls">
+        <button id="btnUpload">Upload image</button>
+        <button id="btnCamera">Take photo (camera)</button>
+
+        <input id="fileInput" type="file" accept="image/*" hidden>
+        <input id="cameraInput" type="file" accept="image/*" capture="environment" hidden>
+
+        <label for="lang">OCR language:</label>
+        <select id="lang">
+          <option value="eng">English (eng)</option>
+          <option value="deu">German (deu)</option>
+          <option value="deu_frak">German (Fraktur) (deu_frak)</option>
+          <option value="eng+deu">English + German</option>
+        </select>
+
+  <label for="preproc">Preprocess:</label>
+  <input id="preproc" type="checkbox" />
+  <label for="threshold">Apply threshold (Otsu if checked)</label>
+  <input id="threshold" type="checkbox" />
+  <label for="advanced">Advanced preproc (upscale + denoise)</label>
+  <input id="advanced" type="checkbox" />
+
+  <button id="selectRegion">Select region</button>
+  <button id="clearRegion">Clear region</button>
+  <button id="multiOcr">Run multi-pass OCR</button>
+      </div>
+
+      <div id="previewWrap" class="preview-wrap">
+        <div id="preview" class="preview" aria-live="polite"></div>
+        <canvas id="overlay" class="overlay"></canvas>
+      </div>
+
+      <div id="progress" class="progress"></div>
+
+      <section class="results">
+        <h2>OCR text</h2>
+        <pre id="ocrText" class="ocr-text">(no text yet)</pre>
+
+        <h3>Parsed</h3>
+        <div><strong>Name:</strong> <span id="parsedName">—</span></div>
+        <div><strong>Year:</strong> <span id="parsedYear">—</span></div>
+      </section>
+    </main>
+
+    <!-- Tesseract.js via CDN -->
+    <script src="https://unpkg.com/tesseract.js@2.1.5/dist/tesseract.min.js"></script>
+    <script src="main.js"></script>
+  </body>
+</html>

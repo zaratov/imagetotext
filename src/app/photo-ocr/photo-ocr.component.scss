@@ -1,0 +1,21 @@
+.ocr-card {
+  border: 1px solid #ddd;
+  padding: 12px;
+  border-radius: 6px;
+  max-width: 520px;
+}
+.controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.preview img {
+  max-width: 100%;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+.status pre {
+  background: #f7f7f7;
+  padding: 8px;
+  overflow: auto;
+}
