@@ -11,94 +11,7 @@ const langSelect = document.getElementById('lang');
 const preprocCheckbox = document.getElementById('preproc');
 const thresholdCheckbox = document.getElementById('threshold');
 const advancedCheckbox = document.getElementById('advanced');
-const selectRegionBtn = document.getElementById('selectRegion');
-const clearRegionBtn = document.getElementById('clearRegion');
-const multiOcrBtn = document.getElementById('multiOcr');
-const overlay = document.getElementById('overlay');
-const previewWrap = document.getElementById('previewWrap');
-
-let selection = null; // {x,y,w,h} in image pixels
-let selecting = false;
-let startSel = null;
-
-selectRegionBtn.addEventListener('click', () => {
-  if (!preview.querySelector('img')) return alert('Load an image first');
-  selecting = true;
-  overlay.style.display = 'block';
-});
-clearRegionBtn.addEventListener('click', () => {
-  selection = null;
-  drawOverlay();
-});
-multiOcrBtn.addEventListener('click', () => {
-  const imgEl = preview.querySelector('img');
-  if (!imgEl) return alert('Load an image first');
-  runMultiPass(imgEl).catch(e => console.error(e));
-});
-
-overlay.addEventListener('mousedown', startSelection);
-overlay.addEventListener('mousemove', moveSelection);
-overlay.addEventListener('mouseup', endSelection);
-overlay.addEventListener('mouseleave', () => { if (selecting) endSelection(); });
-
-function startSelection(e) {
-  if (!selecting) return;
-  const rect = overlay.getBoundingClientRect();
-  startSel = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-}
-
-function moveSelection(e) {
-  if (!selecting || !startSel) return;
-  const rect = overlay.getBoundingClientRect();
-  const cur = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-  const x = Math.min(startSel.x, cur.x);
-  const y = Math.min(startSel.y, cur.y);
-  const w = Math.abs(startSel.x - cur.x);
-  const h = Math.abs(startSel.y - cur.y);
-  drawOverlay({ x, y, w, h });
-}
-
-function endSelection(e) {
-  if (!selecting) return;
-  selecting = false;
-  const rect = overlay.getBoundingClientRect();
-  const imgEl = preview.querySelector('img');
-  if (!imgEl) return;
-  const imgRect = imgEl.getBoundingClientRect();
-  // the overlay and image should align inside previewWrap; map overlay coords to image natural pixels
-  const ov = overlay.getBoundingClientRect();
-  const sel = overlay._lastSel;
-  if (!sel) return;
-  // compute scale from displayed img to natural size
-  const scaleX = imgEl.naturalWidth / imgRect.width;
-  const scaleY = imgEl.naturalHeight / imgRect.height;
-  const x = Math.round((sel.x - (imgRect.left - ov.left)) * scaleX);
-  const y = Math.round((sel.y - (imgRect.top - ov.top)) * scaleY);
-  const w = Math.round(sel.w * scaleX);
-  const h = Math.round(sel.h * scaleY);
-  selection = { x: Math.max(0, x), y: Math.max(0, y), w: Math.max(1, w), h: Math.max(1, h) };
-  drawOverlay();
-}
-
-function drawOverlay(sel) {
-  const c = overlay; const ctx = c.getContext('2d');
-  const imgEl = preview.querySelector('img');
-  if (!imgEl) { c.style.display = 'none'; return; }
-  // size overlay to image display size
-  const imgRect = imgEl.getBoundingClientRect();
-  const wrapRect = previewWrap.getBoundingClientRect();
-  c.width = imgRect.width; c.height = imgRect.height;
-  c.style.left = (imgRect.left - wrapRect.left) + 'px';
-  c.style.top = (imgRect.top - wrapRect.top) + 'px';
-  c.style.position = 'absolute';
-  c.style.display = 'block';
-  ctx.clearRect(0, 0, c.width, c.height);
-  const s = sel || selection;
-  if (s) {
-    ctx.strokeStyle = 'lime'; ctx.lineWidth = 2; ctx.strokeRect(s.x, s.y, s.w, s.h);
-  }
-  overlay._lastSel = sel || selection;
-}
+const useProxyCheckbox = document.getElementById('useProxy');
 
 btnUpload.addEventListener('click', () => fileInput.click());
 btnCamera.addEventListener('click', () => cameraInput.click());
@@ -115,7 +28,8 @@ function handleFile(file) {
   parsedYearEl.textContent = '—';
   const wantPre = preprocCheckbox.checked;
   const wantAdvanced = advancedCheckbox && advancedCheckbox.checked;
-  recognize(file, langSelect.value, wantPre, thresholdCheckbox.checked, wantAdvanced).catch(err => {
+  const useProxy = useProxyCheckbox && useProxyCheckbox.checked;
+  recognize(file, langSelect.value, wantPre, thresholdCheckbox.checked, wantAdvanced, useProxy).catch(err => {
     ocrTextEl.textContent = 'Error: ' + String(err);
   });
 }
@@ -124,6 +38,7 @@ async function recognize(file, langs) {
   const wantPre = arguments.length >= 3 ? arguments[2] : false;
   const wantThresh = arguments.length >= 4 ? arguments[3] : false;
   const wantAdvanced = arguments.length >= 5 ? arguments[4] : false;
+  const useProxy = arguments.length >= 6 ? arguments[5] : false;
 
   progressEl.textContent = 'Preparing image...';
   let inputFile = file;
@@ -135,6 +50,21 @@ async function recognize(file, langs) {
     } catch (e) {
       console.warn('preprocess failed', e);
     }
+  }
+
+  if (useProxy) {
+    progressEl.textContent = 'Sending image to OpenAI proxy...';
+    const fd = new FormData();
+    fd.append('image', inputFile, inputFile.name || 'image.jpg');
+    const resp = await fetch('http://localhost:3001/ocr', { method: 'POST', body: fd });
+    if (!resp.ok) throw new Error('OCR proxy error ' + resp.statusText);
+    const json = await resp.json();
+    ocrTextEl.textContent = json.text || '';
+    const parsed = extractNameAndYear(json.text || '');
+    parsedNameEl.textContent = parsed.name || '—';
+    parsedYearEl.textContent = parsed.year || '—';
+    progressEl.textContent = 'Done (via proxy)';
+    return;
   }
 
   progressEl.textContent = 'Loading tesseract worker...';
@@ -159,47 +89,7 @@ async function recognize(file, langs) {
   progressEl.textContent = 'Done';
 }
 
-async function runMultiPass(imgEl) {
-  progressEl.textContent = 'Running multi-pass OCR...';
-  // crop to selection if present
-  let cropFile = null;
-  if (selection) {
-    cropFile = await cropToSelection(imgEl, selection);
-  }
-  const baseFile = cropFile || await fetchImageAsFile(imgEl);
-  const passes = [];
-  // try combinations: adv preprocess + threshold, languages
-  const langChoices = ['deu_frak', 'deu', 'eng+deu'];
-  for (const lang of langChoices) {
-    // two variants: with and without threshold/preproc
-    passes.push({ file: baseFile, lang, pre: true, thresh: true, adv: true });
-    passes.push({ file: baseFile, lang, pre: true, thresh: false, adv: true });
-    passes.push({ file: baseFile, lang, pre: true, thresh: true, adv: false });
-  }
-
-  let best = { score: -Infinity, text: '', parsed: null };
-  for (const p of passes) {
-    progressEl.textContent = `OCR pass ${p.lang} pre=${p.pre} thresh=${p.thresh} adv=${p.adv}`;
-    try {
-      const processed = p.pre ? await preprocessImage(p.file, p.thresh, p.adv) : p.file;
-      const res = await ocrRecognizeWithConfidence(processed, p.lang);
-      const avgConf = averageConfidence(res);
-      const parsed = extractNameAndYear(res.text || '');
-      // scoring - prefer higher confidence and presence of a year
-      let score = avgConf + (parsed.year ? 20 : 0) + ((parsed.name && parsed.name.length>3) ? 5 : 0);
-      if (score > best.score) {
-        best = { score, text: res.text, parsed, res };
-      }
-    } catch (e) {
-      console.warn('pass failed', e);
-    }
-  }
-
-  ocrTextEl.textContent = best.text || '(no result)';
-  parsedNameEl.textContent = (best.parsed && best.parsed.name) || '—';
-  parsedYearEl.textContent = (best.parsed && best.parsed.year) || '—';
-  progressEl.textContent = 'Multi-pass done';
-}
+// multi-pass / selection removed for simplicity — use OpenAI proxy checkbox to route to server.
 
 function fetchImageAsFile(imgEl) {
   return new Promise((resolve, reject) => {
@@ -229,23 +119,7 @@ function cropToSelection(imgEl, sel) {
   });
 }
 
-async function ocrRecognizeWithConfidence(file, lang) {
-  const { Tesseract } = window;
-  const worker = Tesseract.createWorker();
-  await worker.load();
-  await worker.loadLanguage(lang);
-  await worker.initialize(lang);
-  const res = await worker.recognize(file);
-  await worker.terminate();
-  return { text: res.data.text, words: res.data.words || [] };
-}
-
-function averageConfidence(res) {
-  if (!res.words || res.words.length === 0) return 0;
-  let sum = 0; let count = 0;
-  for (const w of res.words) { if (w.confidence != null) { sum += w.confidence; count++; } }
-  return count ? (sum / count) : 0;
-}
+// helper: fetch image as blob and send to server if desired
 
 function extractNameAndYear(text) {
   const raw = (text || '').trim();

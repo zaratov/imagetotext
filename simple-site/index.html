@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Simple OCR Input/Output</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="container">
+    <h1>Simple OCR — Upload or Camera</h1>
+
+    <div class="controls">
+      <div class="row">
+  <button id="btnUpload" type="button">Upload image</button>
+  <button id="btnCamera" type="button">Take photo</button>
+        <input id="fileInput" type="file" accept="image/*" hidden>
+        <input id="cameraInput" type="file" accept="image/*" capture="environment" hidden>
+      </div>
+
+      <div class="row">
+        <label for="useProxy">Use server proxy (http://localhost:3001/ocr)</label>
+        <input id="useProxy" type="checkbox" checked>
+
+        <label for="lang">Language</label>
+        <select id="lang">
+          <option value="deu_frak">deu_frak (Fraktur)</option>
+          <option value="deu">deu (German)</option>
+          <option value="eng">eng (English)</option>
+        </select>
+
+  <button id="btnSubmit" class="primary" type="button">Send / OCR</button>
+      </div>
+
+      <div class="row small">
+        <label for="proxyUrl">Proxy URL</label>
+        <input id="proxyUrl" type="text" value="http://localhost:3001/ocr" />
+      </div>
+    </div>
+
+    <div id="previewWrap" class="preview-wrap">
+      <img id="preview" alt="preview" />
+    </div>
+
+    <div id="progress" class="progress"></div>
+
+    <section class="results">
+      <h2>OCR output</h2>
+      <pre id="ocrText">(no output yet)</pre>
+
+      <h3>Parsed</h3>
+      <div><strong>Name:</strong> <span id="parsedName">—</span></div>
+      <div><strong>Year:</strong> <span id="parsedYear">—</span></div>
+    </section>
+
+    <footer class="note">Tip: If your proxy is down, uncheck "Use server proxy" to run Tesseract in the browser (uses CDN).</footer>
+  </main>
+
+  <script src="main.js"></script>
+</body>
+</html>

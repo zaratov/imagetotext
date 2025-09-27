@@ -1,57 +1,21 @@
-import { Injectable } from //'@angular/core';
+import { Injectable } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
 export class OcrService {
-  private worker: any = null;
-  private currentLangs = '';
+  // POST the image to a server-side proxy which calls OpenAI Vision/Responses
+  private endpoint = (window as any).__env && (window as any).__env.OCR_ENDPOINT ? (window as any).__env.OCR_ENDPOINT : 'http://localhost:3001/ocr';
 
-  private normalizeLangs(l: string | string[] | undefined): string {
-    if (!l) return 'eng';
-    if (Array.isArray(l)) return l.join('+');
-    return l;
-  }
-
-  async ensureWorker(langs?: string | string[]) {
-    const desired = this.normalizeLangs(langs);
-    if (this.worker && this.currentLangs === desired) return this.worker;
-
-    if (this.worker && this.currentLangs !== desired) {
-      try {
-        await this.worker.terminate();
-      } catch (e) {
-        // ignore
-      }
-      this.worker = null;
-    }
-
-    // dynamic import to avoid adding tesseract to main bundle unless used
-    const Tesseract = await import('tesseract.js');
-    this.worker = Tesseract.createWorker({
-      logger: (_m: any) => {
-        // noop - could emit events
-      }
-    });
-    await this.worker.load();
-    await this.worker.loadLanguage(desired);
-    await this.worker.initialize(desired);
-    this.currentLangs = desired;
-    return this.worker;
-  }
-
-  async recognizeImage(file: File, langs?: string | string[]): Promise<string> {
-    const worker = await this.ensureWorker(langs);
-    const result = await worker.recognize(file);
-    return result?.data?.text || '';
+  async recognizeImage(file: File, _langs?: string | string[]): Promise<string> {
+    const fd = new FormData();
+    fd.append('image', file, file.name || 'image.jpg');
+    const res = await fetch(this.endpoint, { method: 'POST', body: fd });
+    if (!res.ok) throw new Error('OCR server error: ' + res.statusText);
+    const json = await res.json();
+    return json.text || '';
   }
 
   async terminate() {
-    if (!this.worker) return;
-    try {
-      await this.worker.terminate();
-    } catch (e) {
-      // ignore
-    }
-    this.worker = null;
-    this.currentLangs = '';
+    // no-op for server-based OCR
+    return;
   }
 }

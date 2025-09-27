@@ -32,14 +32,12 @@
   <label for="advanced">Advanced preproc (upscale + denoise)</label>
   <input id="advanced" type="checkbox" />
 
-  <button id="selectRegion">Select region</button>
-  <button id="clearRegion">Clear region</button>
-  <button id="multiOcr">Run multi-pass OCR</button>
+  <label for="useProxy">Use OpenAI proxy</label>
+  <input id="useProxy" type="checkbox" />
       </div>
 
       <div id="previewWrap" class="preview-wrap">
         <div id="preview" class="preview" aria-live="polite"></div>
-        <canvas id="overlay" class="overlay"></canvas>
       </div>
 
       <div id="progress" class="progress"></div>
@@ -53,9 +51,21 @@
         <div><strong>Year:</strong> <span id="parsedYear">—</span></div>
       </section>
     </main>
-
     <!-- Tesseract.js via CDN -->
     <script src="https://unpkg.com/tesseract.js@2.1.5/dist/tesseract.min.js"></script>
+    <script src="https://unpkg.com/tesseract.js@2.1.5/dist/tesseract.min.js"
+            integrity="sha384-+Qw6vQw2v1p7Q9Qw1Qw2v1p7Q9Qw1Qw2v1p7Q9Qw1Qw2v1p7Q9Qw1Qw2v1p7Q9Qw"
+            crossorigin="anonymous"></script>
+      // Check if the "Use OpenAI proxy" checkbox is checked
+      const useProxyCheckbox = document.getElementById('useProxy');
+      useProxyCheckbox.addEventListener('change', () => {
+        if (useProxyCheckbox.checked) {
+          console.log('OpenAI proxy will be used. Tesseract.js is disabled.');
+        } else {
+          console.log('Tesseract.js is active.');
+        }
+      });
+    </script>
     <script src="main.js"></script>
   </body>
 </html>

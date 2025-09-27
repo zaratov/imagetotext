@@ -15,3 +15,16 @@ How to run
 Notes
 - This site uses Tesseract.js from UNPKG CDN. The first recognition will download language files.
 - Use the language selector to switch between `eng`, `deu`, and `eng+deu`.
+
+OpenAI proxy (optional)
+- I added a small Express proxy at `server/index.js` that accepts POST `/ocr` with form field `image` and forwards it to OpenAI Responses for vision-based text extraction. This keeps your API key server-side.
+- To run it:
+
+   ```bash
+   cd server
+   npm install
+   # set OPENAI_API_KEY in environment or .env file
+   npm start
+   ```
+
+- The Angular `OcrService` is updated to POST images to `http://localhost:3001/ocr` by default. Adjust `__env.OCR_ENDPOINT` if you host elsewhere.
